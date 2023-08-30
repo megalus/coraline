@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.4 (2023-08-30)
+
+### Fix
+
+* Correct table default name. ([`137d9ed`](https://github.com/megalus/coraline/commit/137d9ed6d2c8cf24b585ab1543b23db0c4fa36a8))
+
 ## v0.1.3 (2023-08-30)
 
 ### Fix
