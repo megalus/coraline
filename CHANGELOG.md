@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.2 (2023-08-30)
+
+### Fix
+
+* Move mypy-boto3-dynamodb to dev dependencies ([`5077094`](https://github.com/megalus/coraline/commit/5077094b3a2a58b164304d78c8ed86b606c76bdb))
+
 ## v0.1.1 (2023-08-30)
 
 ### Fix
