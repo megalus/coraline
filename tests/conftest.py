@@ -3,20 +3,14 @@ from uuid import UUID
 
 import boto3
 import pytest
-import stringcase
 
 from coraline import CoralConfig, CoralModel, HashType, KeyField
 
 
 @pytest.fixture
-def user_table(faker):
-    table_name = stringcase.camelcase(
-        faker.sentence(nb_words=3, variable_nb_words=False)
-    )
-
+def user_table():
     class UserTable(CoralModel):
         model_config = CoralConfig(
-            table_name=table_name,
             aws_endpoint_url="http://localhost:8000",
             aws_region="local",
         )
@@ -37,7 +31,7 @@ def user_test(user_table, client, faker):
     user = user_table(username="foo", password=passw)
     user.get_or_create_table()
     client.put_item(
-        TableName=user_table.model_config["table_name"],
+        TableName=user_table.get_table_name(),
         Item={
             "username": {"S": "foo"},
             "password": {"S": passw},
@@ -52,3 +46,11 @@ def client():
     yield boto3.client(
         "dynamodb", endpoint_url="http://localhost:8000", region_name="local"
     )
+
+
+@pytest.fixture(autouse=True, scope="session")
+def clean_db(client):
+    yield
+    table_info = client.list_tables()
+    for table_name in table_info["TableNames"]:
+        client.delete_table(TableName=table_name)

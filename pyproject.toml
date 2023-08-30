@@ -27,6 +27,7 @@ stela = "*"
 asbool = "*"
 
 [tool.poetry.dev-dependencies]
+boto3 = "*"
 mypy-boto3-dynamodb = "*"
 Faker = "*"
 pytest = "*"

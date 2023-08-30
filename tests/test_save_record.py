@@ -5,7 +5,7 @@ def test_save_record(user_table, client, faker):
     new_user = user_table(username="foo", password=faker.password())
     new_user.save()
     key_data = {"userId": {"S": str(new_user.user_id)}}
-    user_on_disk = client.get_item(TableName=user_table._get_table_name(), Key=key_data)
+    user_on_disk = client.get_item(TableName=user_table.get_table_name(), Key=key_data)
 
     # Assert
     assert str(new_user.user_id) == user_on_disk["Item"]["userId"]["S"]

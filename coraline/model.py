@@ -31,14 +31,14 @@ class CoralModel(BaseModel):
             self._client = self.__class__._get_client()
         return self._client
 
-    def get_table_name(self) -> str:
+    def table_name(self) -> str:
         if not self._table_name:
-            self._table_name = self.__class__._get_table_name()
+            self._table_name = self.__class__.get_table_name()
         return self._table_name
 
     @classmethod
-    def _get_table_name(cls):
-        return cls.model_config.get("table_name") or cls.__class__.__name__
+    def get_table_name(cls):
+        return cls.model_config.get("table_name") or cls.__name__
 
     @classmethod
     def _get_client_parameters(cls, env_key: str):
@@ -148,7 +148,7 @@ class CoralModel(BaseModel):
     def get_or_create_table(cls):
         try:
             client = cls._get_client()
-            table = client.describe_table(TableName=cls._get_table_name())
+            table = client.describe_table(TableName=cls.get_table_name())
             return table
         except botocore.exceptions.ClientError as exc:
             if exc.response["Error"]["Code"] == "ResourceNotFoundException":
@@ -157,7 +157,7 @@ class CoralModel(BaseModel):
 
     @classmethod
     def create_table(cls):
-        table_name = cls._get_table_name()
+        table_name = cls.get_table_name()
 
         # Get Attribute Definition from Pydantic custom KeyFields
         attribute_definitions = [
@@ -223,14 +223,14 @@ class CoralModel(BaseModel):
             for field_name, field_info in self.model_fields.items()
         }
         return self.get_client().put_item(
-            TableName=self.get_table_name(), Item=item, **kwargs
+            TableName=self.table_name(), Item=item, **kwargs
         )
 
     @classmethod
     def exists(cls, **kwargs):
         client, key_query, kwargs = cls._get_key_query(**kwargs)
         response = client.get_item(
-            TableName=cls._get_table_name(), Key=key_query, **kwargs
+            TableName=cls.get_table_name(), Key=key_query, **kwargs
         )
         return "Item" in response
 
@@ -238,12 +238,12 @@ class CoralModel(BaseModel):
     def get(cls, **kwargs):
         client, key_query, kwargs = cls._get_key_query(**kwargs)
         response = client.get_item(
-            TableName=cls._get_table_name(), Key=key_query, **kwargs
+            TableName=cls.get_table_name(), Key=key_query, **kwargs
         )
 
         if "Item" not in response:
             raise NotFound(
-                f"Item not found in table {cls._get_table_name()}: {key_query}"
+                f"Item not found in table {cls.get_table_name()}: {key_query}"
             )
 
         item_payload = {

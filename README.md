@@ -177,7 +177,10 @@ You can use boto3's client to perform any operation you need. Just use the `get_
 ```python
 new_user = Users(name="John Doe", user_type=UserType.USER, age=30, password="123456")
 new_user.save()
-new_user.get_client().create_backup(TableName=new_user.get_table_name(), BackupName="MyBackup")
+new_user.get_client().create_backup(
+   TableName=new_user.table_name(),  # or Users.get_table_name()
+   BackupName="MyBackup"
+)
 ```
 
 ---
