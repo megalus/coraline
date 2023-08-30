@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.1 (2023-08-30)
+
+### Fix
+
+* Error when provisioned throughput is not defined ([`f5dd104`](https://github.com/megalus/coraline/commit/f5dd1049084b1774e7d1fdafd8ae1c087ec7acd7))
+
+### Documentation
+
+* Fix typo ([`be9248b`](https://github.com/megalus/coraline/commit/be9248b6e6a32ae8671753656502dca98fd55e9e))
+
 ## v0.1.0 (2023-08-30)
 
 ### Feature
