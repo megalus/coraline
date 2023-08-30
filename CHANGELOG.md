@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.3 (2023-08-30)
+
+### Fix
+
+* Make boto optional. ([`0c16092`](https://github.com/megalus/coraline/commit/0c1609295cd8b75455c22fa07c6c565edd648bfe))
+
 ## v0.1.2 (2023-08-30)
 
 ### Fix
