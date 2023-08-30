@@ -19,7 +19,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9,<=3.11"
 boto3 = "*"
-mypy-boto3-dynamodb = "*"
 pydantic = "*"
 stringcase = "*"
 loguru = "*"
@@ -28,6 +27,7 @@ stela = "*"
 asbool = "*"
 
 [tool.poetry.dev-dependencies]
+mypy-boto3-dynamodb = "*"
 Faker = "*"
 pytest = "*"
 pytest-asyncio = "*"

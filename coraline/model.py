@@ -8,13 +8,17 @@ import boto3
 import botocore
 from lamina.helpers import async_
 from loguru import logger
-from mypy_boto3_dynamodb import DynamoDBClient
 from pydantic import BaseModel, PrivateAttr
 from stela import env
 
 from coraline.config import CoralConfig
 from coraline.exceptions import NotFound
 from coraline.types import BillingMode, HashType
+
+try:
+    from mypy_boto3_dynamodb import DynamoDBClient
+except ImportError:
+    from botocore.client import BaseClient as DynamoDBClient
 
 
 class CoralModel(BaseModel):
