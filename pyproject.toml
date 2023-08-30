@@ -1,3 +1,13 @@
+[tool.semantic_release]
+version_variable = [
+    "coraline/__init__.py:__version__",
+    "pyproject.toml:version"
+]
+branch = "main"
+upload_to_pypi = true
+upload_to_release = true
+build_command = "python -m pip install -U twine poetry && poetry build"
+
 [tool.poetry]
 name = "coraline"
 version = "0.0.0"
