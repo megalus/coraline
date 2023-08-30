@@ -188,14 +188,19 @@ class CoralModel(BaseModel):
                 "WriteCapacityUnits": cls.model_config.get("write_capacity_units", 1),
             }
 
+        create_table_kwargs = {
+            "TableName": table_name,
+            "AttributeDefinitions": attribute_definitions,
+            "KeySchema": key_schema,
+            "BillingMode": billing_mode,
+        }
+        if provisioned_throughput:
+            create_table_kwargs.update(provisioned_throughput)
+
         logger.debug(f"Creating table {table_name}...")
         client = cls._get_client()
         table = client.create_table(
-            TableName=table_name,
-            AttributeDefinitions=attribute_definitions,
-            KeySchema=key_schema,
-            BillingMode=billing_mode,
-            ProvisionedThroughput=provisioned_throughput,
+            **create_table_kwargs,
             **cls.model_config.get("extra_table_params", {}),
         )
 
