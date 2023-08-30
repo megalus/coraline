@@ -186,4 +186,4 @@ new_user.get_client().create_backup(TableName=new_user.get_table_name(), BackupN
 ### Not working?
 
 Don't panic. Get a towel and, please, open an
-[issue](https://github.com/megalus/stela/issues).
+[issue](https://github.com/megalus/coraline/issues).
