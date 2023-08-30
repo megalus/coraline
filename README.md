@@ -8,6 +8,12 @@ Coraline is a Python library that aims to use Pydantic models to work with AWS D
 $ pip install coraline
 ```
 
+Coraline needs `boto3` to work. If you don't have it installed, you can install it using:
+
+```shell
+$ pip install coraline[boto]
+```
+
 ---
 
 ### Documentation
