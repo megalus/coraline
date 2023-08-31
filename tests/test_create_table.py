@@ -1,3 +1,5 @@
+import pytest
+
 from coraline import CoralConfig, CoralModel, HashType, KeyField
 
 
@@ -39,3 +41,20 @@ def test_create_table_with_custom_name(client):
     # Assert
     response = client.describe_table(TableName=TestModel.get_table_name())
     assert response["Table"]["TableName"] == "MyCustomNameTable"
+
+
+def test_do_not_create_database_in_aws_during_tests():
+    # Arrange
+    class TestModel(CoralModel):
+        model_config = CoralConfig(
+            aws_region="us-east-1",
+        )
+        foo: str = KeyField(..., hash_type=HashType.HASH)
+        bar: str
+
+    # Act / Assert
+    with pytest.raises(ValueError) as excinfo:
+        TestModel.get_or_create_table()
+        assert "During Unit Tests, you cannot create a table in AWS." in str(
+            excinfo.value
+        )

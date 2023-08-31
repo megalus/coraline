@@ -22,6 +22,7 @@ def user_table():
         username: str
         password: str
 
+    UserTable.get_or_create_table()
     return UserTable
 
 
@@ -48,8 +49,12 @@ def client():
     )
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True)
 def clean_db(client):
+    if "amazonaws.com" in client._endpoint.host:
+        raise ValueError(
+            "During Unit Tests, you cannot create a table in AWS. Please use a local DynamoDB."
+        )
     yield
     table_info = client.list_tables()
     for table_name in table_info["TableNames"]:

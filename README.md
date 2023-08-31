@@ -111,7 +111,7 @@ accepted by `boto3`'s `create_table` use the `extra_table_params` parameter.
 
 ---
 
-### Configuring the Client
+### Configuring AWS Credentials
 
 To configure boto3's client credentials, Coraline will:
 
@@ -129,11 +129,29 @@ CORALINE_ENDPOINT_URL="http://localhost:8000"
 
 #### Class Example:
 ```python
+from coraline import CoralModel, CoralConfig
 
 class Users(CoralModel):
     model_config = CoralConfig(
         aws_region="local",
         endpoint_url="http://localhost:8000"
+    )
+```
+
+#### Class Example using Boto3 Config instance:
+```python
+from botocore.config import Config
+from coraline import CoralModel, CoralConfig
+
+config = Config(
+    region_name="local",
+    endpoint_url="http://localhost:8000"
+)
+
+class Users(CoralModel):
+    model_config = CoralConfig(
+        aws_region="local",
+        aws_config=config
     )
 ```
 
@@ -145,25 +163,25 @@ class Users(CoralModel):
 Use to get Table info or create the table if it doesn't exist.
 
 ```python
-Users.get_or_create_table()
+table_description: dict = Users.get_or_create_table()
 ```
 
 #### Check if Record exists
 Use to check if a record exists in the table. You need to pass on the parameters all hash and range keys defined in Model:
 
 ```python
-user_exists = Users.exists(user_id="12345678-1234-1234-1234-123456789012", user_type=UserType.USER)
+user_exists: bool = Users.exists(user_id="12345678-1234-1234-1234-123456789012", user_type=UserType.USER)
 ```
 
 #### Get Record
 Use to get a record from the table. You need to pass on the parameters all hash and range keys defined in Model:
 
 ```python
-user = Users.get(user_id="12345678-1234-1234-1234-123456789012", user_type=UserType.USER)
+user: Users = Users.get(user_id="12345678-1234-1234-1234-123456789012", user_type=UserType.USER)
 ```
 
 #### Save Record
-Use to save a record in the table. You need to pass on the parameters all hash and range keys defined in Model:
+Use to save a record in the table:
 
 ```python
 new_user = Users(name="John Doe", user_type=UserType.USER, age=30, password="123456")
@@ -186,9 +204,10 @@ new_user.get_client().create_backup(
 ---
 
 ### Future Implementations
-* Add support for Query and Scan operations
-* Add support for Global and Local Secondary Indexes
-* Add Documentation
+* Add native support for Global and Local Secondary Indexes
+* Add native support for Query operations
+* Add native support for TransactWriteItems and TransactGetItems
+* Add native support for BatchWriteItems and BatchGetItems
 
 ---
 

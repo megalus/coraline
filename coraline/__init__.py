@@ -1,4 +1,3 @@
-# Import Coraline field model and types here
 from asbool import asbool
 from loguru import logger
 from stela import env

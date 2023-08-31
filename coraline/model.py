@@ -1,4 +1,5 @@
 import json
+import sys
 import uuid
 from decimal import Decimal
 from enum import Enum
@@ -19,6 +20,8 @@ try:
     from mypy_boto3_dynamodb import DynamoDBClient
 except ImportError:
     from botocore.client import BaseClient as DynamoDBClient
+
+RUNNING_TESTS = "pytest" in sys.modules or "test" in sys.argv
 
 
 class CoralModel(BaseModel):
@@ -157,6 +160,14 @@ class CoralModel(BaseModel):
 
     @classmethod
     def create_table(cls):
+        # Sanity check
+        client = cls._get_client()
+        if RUNNING_TESTS and "amazonaws.com" in client._endpoint.host:
+            raise ValueError(
+                "During Unit Tests, you cannot create a table in AWS. Please use a local DynamoDB."
+            )
+
+        # Get Table Name
         table_name = cls.get_table_name()
 
         # Get Attribute Definition from Pydantic custom KeyFields
@@ -202,7 +213,7 @@ class CoralModel(BaseModel):
             create_table_kwargs.update(provisioned_throughput)
 
         logger.debug(f"Creating table {table_name}...")
-        client = cls._get_client()
+
         table = client.create_table(
             **create_table_kwargs,
             **cls.model_config.get("extra_table_params", {}),
