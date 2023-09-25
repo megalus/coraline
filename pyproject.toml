@@ -32,6 +32,7 @@ mypy-boto3-dynamodb = "*"
 Faker = "*"
 pytest = "*"
 pytest-asyncio = "*"
+arrow = "*"
 
 [tool.poetry.extras]
 boto = ["boto3"]

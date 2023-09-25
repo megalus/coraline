@@ -87,8 +87,8 @@ class Users(CoralModel):
         read_capacity_units=5,
         write_capacity_units=5,
         alias_generator=to_camel,
+        protect_from_exclusion=True,
         extra_table_params={
-            "DeletionProtectionEnabled": True,
             "Tags": [
                 {
                     "Key": "Project",
@@ -134,7 +134,7 @@ from coraline import CoralModel, CoralConfig
 class Users(CoralModel):
     model_config = CoralConfig(
         aws_region="local",
-        endpoint_url="http://localhost:8000"
+        aws_endpoint_url="http://localhost:8000"
     )
 ```
 
@@ -164,6 +164,17 @@ Use to get Table info or create the table if it doesn't exist.
 
 ```python
 table_description: dict = Users.get_or_create_table()
+```
+
+#### Get Table Info
+Use to get Table info. You can also add the client `describe_XXX` methods here, for any describe operation which does not have signature
+or the only argument is the table name:
+
+* Allowable Descriptions Example: `describe_continuous_backups`, `describe_time_to_live`, `descript_limits`, etc...
+* Not Allowable Descriptions Example: `describe_backup`, `describe_global_table`, `describe_export`, etc...
+
+```python
+table_indo: dict = Users.get_table_info(include=["describe_time_to_live"])
 ```
 
 #### Check if Record exists
@@ -202,8 +213,15 @@ new_user.get_client().create_backup(
 ```
 
 ---
+### Current Project Status
+
+Current status: In Progress
+
+We strong advise to not use this lib in Production projects at this current stage.
+Except bugs and breaking changes between each release.
 
 ### Future Implementations
+* Add option to "update" tables (`create_or_update_table` method)
 * Add native support for Global and Local Secondary Indexes
 * Add native support for Query operations
 * Add native support for TransactWriteItems and TransactGetItems

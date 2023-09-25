@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import sys
 import uuid
@@ -44,6 +46,14 @@ class CoralModel(BaseModel):
         return cls.model_config.get("table_name") or cls.__name__
 
     @classmethod
+    def _get_boto_arg(cls, env_key: str):
+        if env_key == "aws_region":
+            env_key = "region_name"
+        if env_key == "aws_endpoint_url":
+            env_key = "endpoint_url"
+        return env_key
+
+    @classmethod
     def _get_client_parameters(cls, env_key: str):
         if env_key == "region_name":
             env_key = "aws_region"
@@ -54,12 +64,11 @@ class CoralModel(BaseModel):
         # Try Coraline env variables. Ex. CORALINE_AWS_REGION
         # AWS Config did not exists as Environment Variable
         if not value and env_key not in ["config"]:
-            key = env_key if env_key.startswith("aws_") else f"aws_{env_key}"
-            value = env.get(f"CORALINE_{key.upper()}", raise_on_missing=False)
+            value = env.get(f"CORALINE_{env_key.upper()}", raise_on_missing=False)
 
         # Try AWS env variables. Ex. AWS_REGION
         # AWS Config and DynamoDB Endpoint URL does not exist as AWS Environment Variable
-        if not value and env_key not in ["config", "endpoint_url"]:
+        if not value and env_key not in ["config", "aws_endpoint_url"]:
             value = env.get(env_key.upper(), raise_on_missing=False)
 
         if value:
@@ -77,13 +86,13 @@ class CoralModel(BaseModel):
         else:
             # Using data from ModelConfig > Coraline Envs > AWS Envs
             client_args = {
-                env_key: cls._get_client_parameters(env_key)
+                cls._get_boto_arg(env_key): cls._get_client_parameters(env_key)
                 for env_key in [
-                    "region_name",
+                    "aws_region",
                     "aws_secret_access_key",
                     "aws_access_key_id",
                     "aws_session_token",
-                    "endpoint_url",
+                    "aws_endpoint_url",
                 ]
                 if cls._get_client_parameters(env_key) is not None
             }
@@ -208,6 +217,9 @@ class CoralModel(BaseModel):
             "AttributeDefinitions": attribute_definitions,
             "KeySchema": key_schema,
             "BillingMode": billing_mode,
+            "DeletionProtectionEnabled": cls.model_config.get(
+                "protect_from_exclusion", False
+            ),
         }
         if provisioned_throughput:
             create_table_kwargs.update(provisioned_throughput)
@@ -222,14 +234,49 @@ class CoralModel(BaseModel):
         # wait until table is created
         waiter = client.get_waiter("table_exists")
         waiter.wait(TableName=table_name, WaiterConfig={"Delay": 1, "MaxAttempts": 25})
+
+        # Check for TTL fields
+        ttl_fields = [
+            field_name
+            for field_name, field_info in cls.model_fields.items()
+            if field_info.json_schema_extra is not None
+            and field_info.json_schema_extra.get("dynamodb_ttl") is True
+        ]
+        if len(ttl_fields) > 1:
+            raise ValueError(
+                f"Only one TTL field is allowed. Found {len(ttl_fields)}: {ttl_fields}"
+            )
+
+        if ttl_fields:
+            logger.debug(
+                f"Enabling TTL for {table_name} using field: '{ttl_fields[0]}'..."
+            )
+            client.update_time_to_live(
+                TableName=table_name,
+                TimeToLiveSpecification={
+                    "Enabled": True,
+                    "AttributeName": ttl_fields[0],
+                },
+            )
+
         return table
 
     def save(self, **kwargs):
+        def get_key(field_info):
+            return self._convert_type(field_info.annotation)
+
+        def get_value(field_info, value):
+            if get_key(field_info) == "N":
+                value = str(value)
+            if get_key(field_info) == "NS":
+                value = [str(v) for v in value]
+            return value
+
         dump_data = json.loads(self.model_dump_json())
         item = {
             field_info.alias
             or field_name: {
-                self._convert_type(field_info.annotation): dump_data[field_name]
+                get_key(field_info): get_value(field_info, dump_data[field_name])
             }
             for field_name, field_info in self.model_fields.items()
         }
@@ -261,6 +308,33 @@ class CoralModel(BaseModel):
             key: data[list(data.keys())[0]] for key, data in response["Item"].items()
         }
         return cls(**item_payload)
+
+    @classmethod
+    def get_table_info(cls, include: list[str] | None = None):
+        allowed_table_name_describes = [
+            "describe_continuous_backups",
+            "describe_contributor_insights",
+            "describe_kinesis_streaming_destination",
+            "describe_table_replica_auto_scaling",
+            "describe_time_to_live",
+        ]
+        allowed_empty_describes = ["describe_endpoints", "describe_limits"]
+        all_allowed = sorted(allowed_empty_describes + allowed_table_name_describes)
+        for desc in include or []:
+            if desc not in all_allowed:
+                raise ValueError(f"Invalid describe: {desc}. Allowed: {all_allowed}")
+        table_info = cls._get_client().describe_table(TableName=cls.get_table_name())
+        table_info.pop("ResponseMetadata", None)
+        for key in include or []:
+            args = (
+                {"TableName": cls.get_table_name()}
+                if key in allowed_table_name_describes
+                else {}
+            )
+            describe_info = getattr(cls._get_client(), key)(**args)
+            describe_info.pop("ResponseMetadata", None)
+            table_info |= describe_info
+        return table_info
 
     @classmethod
     def _get_key_query(cls, **kwargs):

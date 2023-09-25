@@ -18,3 +18,13 @@ def KeyField(*args, **kwargs):  # C901
             {"dynamodb_key": True, "dynamodb_hash_type": hash_type}
         )
     return Field(*args, **kwargs)
+
+
+def TTLField(*args, **kwargs):  # C901
+    if "json_schema_extra" not in kwargs:
+        kwargs["json_schema_extra"] = {
+            "dynamodb_ttl": True,
+        }
+    else:
+        kwargs["json_schema_extra"].update({"dynamodb_ttl": True})
+    return Field(*args, **kwargs)

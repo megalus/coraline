@@ -1,10 +1,13 @@
 import uuid
+from datetime import datetime
 from uuid import UUID
 
 import boto3
 import pytest
+from pydantic import Field
 
 from coraline import CoralConfig, CoralModel, HashType, KeyField
+from coraline.field import TTLField
 
 
 @pytest.fixture
@@ -21,15 +24,34 @@ def user_table():
         )
         username: str
         password: str
+        score: float
 
     UserTable.get_or_create_table()
     return UserTable
 
 
 @pytest.fixture
+def redirect_link_table():
+    class RedirectLinkTable(CoralModel):
+        model_config = CoralConfig(
+            aws_endpoint_url="http://localhost:8000",
+            aws_region="local",
+        )
+        code: str = KeyField(
+            default_factory=lambda: uuid.uuid4(), hash_type=HashType.HASH
+        )
+        link: str
+        created_at: datetime = Field(default_factory=datetime.utcnow)
+        ttl: int = TTLField(default=3600)
+
+    RedirectLinkTable.get_or_create_table()
+    return RedirectLinkTable
+
+
+@pytest.fixture
 def user_test(user_table, client, faker):
     passw = faker.password()
-    user = user_table(username="foo", password=passw)
+    user = user_table(username="foo", password=passw, score=9.5)
     user.get_or_create_table()
     client.put_item(
         TableName=user_table.get_table_name(),
@@ -37,6 +59,7 @@ def user_test(user_table, client, faker):
             "username": {"S": "foo"},
             "password": {"S": passw},
             "userId": {"S": str(user.user_id)},
+            "score": {"N": "9.5"},
         },
     )
     return user
