@@ -3,7 +3,7 @@ from loguru import logger
 from stela import env
 
 from coraline.config import CoralConfig
-from coraline.field import KeyField
+from coraline.field import KeyField, TTLField
 from coraline.model import CoralModel
 from coraline.types import BillingMode, HashType
 
@@ -15,6 +15,7 @@ __all__ = [
     "BillingMode",
     "HashType",
     "CoralConfig",
+    "TTLField",
 ]
 
 if asbool(env.get_or_default("CORALINE_SHOW_LOGS", True)):

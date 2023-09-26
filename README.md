@@ -167,14 +167,14 @@ table_description: dict = Users.get_or_create_table()
 ```
 
 #### Get Table Info
-Use to get Table info. You can also add the client `describe_XXX` methods here, for any describe operation which does not have signature
-or the only argument is the table name:
+Use to get Table info. You can also add boto's client `describe_XXX` methods here, for any describe operation which does not have signature
+or the only argument is the TableName:
 
 * Allowable Descriptions Example: `describe_continuous_backups`, `describe_time_to_live`, `descript_limits`, etc...
 * Not Allowable Descriptions Example: `describe_backup`, `describe_global_table`, `describe_export`, etc...
 
 ```python
-table_indo: dict = Users.get_table_info(include=["describe_time_to_live"])
+table_info: dict = Users.get_table_info(include=["describe_time_to_live"])
 ```
 
 #### Check if Record exists
