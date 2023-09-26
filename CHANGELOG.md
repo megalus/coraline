@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.0 (2023-09-25)
+
+### Feature
+
+* Update various funcs for lib's improved handling & added table creation protection. ([`f35458e`](https://github.com/megalus/coraline/commit/f35458eeda8b46ed6d6a27cb4a801a2d57a9b599))
+
 ## v0.1.4 (2023-08-30)
 
 ### Fix
