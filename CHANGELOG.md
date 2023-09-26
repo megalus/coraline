@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.2 (2023-09-26)
+
+### Fix
+
+* Update Docker port, add tests AWS credentials and rename exception ([`e565bce`](https://github.com/megalus/coraline/commit/e565bcef49214eac021327f83ba1e1ab9c40f830))
+
 ## v0.2.1 (2023-09-26)
 
 ### Fix
