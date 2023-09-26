@@ -10,7 +10,7 @@ build_command = "python -m pip install -U twine poetry && poetry build"
 
 [tool.poetry]
 name = "coraline"
-version = "0.2.0"
+version = "0.2.1"
 description = "Use Pydantic Models to handle AWS DynamoDB tables"
 authors = ["Chris Maillefaud <chrismaille@users.noreply.github.com>"]
 license = "MIT"
