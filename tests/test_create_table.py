@@ -30,7 +30,9 @@ def test_create_table_with_custom_name(client):
         model_config = CoralConfig(
             table_name="MyCustomNameTable",
             aws_region="local",
-            aws_endpoint_url="http://localhost:8000",
+            aws_endpoint_url="http://localhost:8001",
+            aws_access_key_id="DUMMYIDEXAMPLE",
+            aws_secret_access_key="DUMMYEXAMPLEKEY",
         )
         foo: str = KeyField(..., hash_type=HashType.HASH)
         bar: str

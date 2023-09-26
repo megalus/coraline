@@ -2,7 +2,7 @@ class CoralException(Exception):
     pass
 
 
-class NotFound(CoralException):
+class CoralNotFound(CoralException):
     pass
 
 

@@ -14,7 +14,9 @@ from coraline.field import TTLField
 def user_table():
     class UserTable(CoralModel):
         model_config = CoralConfig(
-            aws_endpoint_url="http://localhost:8000",
+            aws_endpoint_url="http://localhost:8001",
+            aws_access_key_id="DUMMYIDEXAMPLE",
+            aws_secret_access_key="DUMMYEXAMPLEKEY",
             aws_region="local",
         )
         user_id: UUID = KeyField(
@@ -34,7 +36,9 @@ def user_table():
 def redirect_link_table():
     class RedirectLinkTable(CoralModel):
         model_config = CoralConfig(
-            aws_endpoint_url="http://localhost:8000",
+            aws_endpoint_url="http://localhost:8001",
+            aws_access_key_id="DUMMYIDEXAMPLE",
+            aws_secret_access_key="DUMMYEXAMPLEKEY",
             aws_region="local",
         )
         code: str = KeyField(
@@ -68,7 +72,7 @@ def user_test(user_table, client, faker):
 @pytest.fixture(scope="session")
 def client():
     yield boto3.client(
-        "dynamodb", endpoint_url="http://localhost:8000", region_name="local"
+        "dynamodb", endpoint_url="http://localhost:8001", region_name="local"
     )
 
 

@@ -10,7 +10,7 @@ repos:
     rev: v1.0.6
     hooks:
       - id: python-bandit-vulnerability-check
-        args: [ "-s", "B101,B105", "-r", "." ]
+        args: [ "-s", "B101,B105,B106", "-r", "." ]
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:

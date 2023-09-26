@@ -15,7 +15,7 @@ from pydantic import BaseModel, PrivateAttr
 from stela import env
 
 from coraline.config import CoralConfig
-from coraline.exceptions import NotFound
+from coraline.exceptions import CoralNotFound
 from coraline.types import BillingMode, HashType
 
 try:
@@ -300,7 +300,7 @@ class CoralModel(BaseModel):
         )
 
         if "Item" not in response:
-            raise NotFound(
+            raise CoralNotFound(
                 f"Item not found in table {cls.get_table_name()}: {key_query}"
             )
 
