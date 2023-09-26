@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.1 (2023-09-26)
+
+### Fix
+
+* Add missing import ([`cdd9d37`](https://github.com/megalus/coraline/commit/cdd9d378b4d0450e23c3c5cd4c37598ccb254321))
+
 ## v0.2.0 (2023-09-25)
 
 ### Feature

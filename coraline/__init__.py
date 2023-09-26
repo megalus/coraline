@@ -7,7 +7,7 @@ from coraline.field import KeyField, TTLField
 from coraline.model import CoralModel
 from coraline.types import BillingMode, HashType
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "CoralModel",
