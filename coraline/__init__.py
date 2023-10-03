@@ -5,7 +5,7 @@ from stela import env
 from coraline.config import CoralConfig
 from coraline.field import KeyField, TTLField
 from coraline.model import CoralModel
-from coraline.types import BillingMode, HashType
+from coraline.types import BillingMode, HashType, TableClass
 
 __version__ = "0.2.2"
 
@@ -16,6 +16,7 @@ __all__ = [
     "HashType",
     "CoralConfig",
     "TTLField",
+    "TableClass",
 ]
 
 if asbool(env.get_or_default("CORALINE_SHOW_LOGS", True)):

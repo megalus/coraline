@@ -16,7 +16,7 @@ from stela import env
 
 from coraline.config import CoralConfig
 from coraline.exceptions import CoralNotFound
-from coraline.types import BillingMode, HashType
+from coraline.types import BillingMode, HashType, TableClass
 
 try:
     from mypy_boto3_dynamodb import DynamoDBClient
@@ -203,14 +203,14 @@ class CoralModel(BaseModel):
 
         # Get Billing mode from Pydantic Model Config
         provisioned_throughput = None
-        billing_mode = (
-            cls.model_config.get("billing_mode") or BillingMode.PAY_PER_REQUEST
-        )
+        billing_mode = cls.model_config.get("billing_mode") or BillingMode.get_default()
         if billing_mode == BillingMode.PROVISIONED:
             provisioned_throughput = {
                 "ReadCapacityUnits": cls.model_config.get("read_capacity_units", 1),
                 "WriteCapacityUnits": cls.model_config.get("write_capacity_units", 1),
             }
+
+        table_class = cls.model_config.get("table_class") or TableClass.get_default()
 
         create_table_kwargs = {
             "TableName": table_name,
@@ -220,6 +220,7 @@ class CoralModel(BaseModel):
             "DeletionProtectionEnabled": cls.model_config.get(
                 "protect_from_exclusion", False
             ),
+            "TableClass": table_class,
         }
         if provisioned_throughput:
             create_table_kwargs.update(provisioned_throughput)

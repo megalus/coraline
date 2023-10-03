@@ -65,7 +65,7 @@ Use the `CoralConfig` class to configure your table.
 ```python
 import uuid
 from enum import Enum
-from coraline import CoralModel, KeyField, HashType, CoralConfig, BillingMode
+from coraline import CoralModel, KeyField, HashType, CoralConfig, BillingMode, TableClass
 from pydantic import SecretStr, Field
 
 
@@ -88,6 +88,7 @@ class Users(CoralModel):
         write_capacity_units=5,
         alias_generator=to_camel,
         protect_from_exclusion=True,
+        table_class=TableClass.STANDARD_INFREQUENT_ACCESS,
         extra_table_params={
             "Tags": [
                 {

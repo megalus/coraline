@@ -3,7 +3,7 @@ from __future__ import annotations as _annotations
 from botocore.config import Config
 from pydantic import ConfigDict
 
-from coraline.types import BillingMode
+from coraline.types import BillingMode, TableClass
 
 
 class CoralConfig(ConfigDict):
@@ -18,4 +18,5 @@ class CoralConfig(ConfigDict):
     read_capacity_units: int | None
     write_capacity_units: int | None
     protect_from_exclusion: bool | None
+    table_class: TableClass | None
     extra_table_params: dict | None

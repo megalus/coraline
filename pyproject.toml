@@ -17,7 +17,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<=3.11"
+python = ">3.9,<4"
 boto3 = {version = "*", optional=true}
 pydantic = "*"
 stringcase = "*"
