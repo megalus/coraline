@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.0 (2023-10-03)
+
+### Feature
+
+* Add TableClass attribute to Coraline and update Python version ([`1f010a4`](https://github.com/megalus/coraline/commit/1f010a4d7b340e58ba65c55b9b600ba841342664))
+
 ## v0.2.2 (2023-09-26)
 
 ### Fix
