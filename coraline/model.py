@@ -14,7 +14,6 @@ from loguru import logger
 from pydantic import BaseModel, PrivateAttr
 from stela import env
 
-from coraline.config import CoralConfig
 from coraline.exceptions import CoralNotFound
 from coraline.types import BillingMode, HashType, TableClass
 
@@ -27,7 +26,6 @@ RUNNING_TESTS = "pytest" in sys.modules or "test" in sys.argv
 
 
 class CoralModel(BaseModel):
-    model_config: CoralConfig
     _client: Optional[DynamoDBClient] = PrivateAttr(default=None)
     _table_name: Optional[str] = PrivateAttr(default=None)
 
