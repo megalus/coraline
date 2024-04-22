@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.1 (2024-04-22)
+
+### Fix
+
+* Model_config error ([`417c9fe`](https://github.com/megalus/coraline/commit/417c9fe43a736d1997e6e6791ee0831a4e19ccf3))
+
 ## v0.3.0 (2023-10-03)
 
 ### Feature
