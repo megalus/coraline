@@ -1,5 +1,5 @@
 [tool.semantic_release]
-version_variable = [
+version_variables = [
     "coraline/__init__.py:__version__",
     "pyproject.toml:version"
 ]
@@ -17,7 +17,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">3.9,<4"
+python = ">=3.11,<4"
 boto3 = {version = "*", optional=true}
 pydantic = "*"
 stringcase = "*"
