@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.0.1 (2025-03-20)
+
+### Fixes
+
+* fix: update deps ([`664af03`](https://github.com/megalus/coraline/commit/664af0327c7f0773b713e78df36e9e885d274d96))
+
+
 ## v1.0.0 (2024-10-09)
 
 ### Breaking
