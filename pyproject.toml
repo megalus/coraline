@@ -20,7 +20,7 @@ readme = "README.md"
 python = ">=3.11,<4"
 boto3 = {version = "*", optional=true}
 pydantic = "*"
-stringcase = "*"
+inflection = "*"
 loguru = "*"
 py-lamina = "*"
 stela = "*"
