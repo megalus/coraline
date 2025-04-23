@@ -1,28 +1,50 @@
-## Welcome to Coraline
+# Welcome to Coraline
 
-Coraline is a Python library that aims to use Pydantic models to work with AWS DynamoDB tables.
+[![Python Version](https://img.shields.io/pypi/pyversions/coraline)](https://pypi.org/project/coraline/)
+[![PyPI Version](https://img.shields.io/pypi/v/coraline)](https://pypi.org/project/coraline/)
+[![License](https://img.shields.io/github/license/megalus/coraline)](https://github.com/megalus/coraline/blob/main/LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/megalus/coraline/publish.yml?branch=main)](https://github.com/megalus/coraline/actions/workflows/publish.yml)
 
-### Install
+Coraline is a Python library that provides a seamless integration between Pydantic models and AWS DynamoDB tables. It allows you to define your data models using Pydantic's powerful validation system and easily map them to DynamoDB tables.
+
+## Features
+
+- Define DynamoDB tables using Pydantic models
+- Automatic table creation and management
+- Type validation and conversion
+- Support for complex data types
+- Easy configuration of AWS credentials
+- Simplified CRUD operations
+
+## Installation
 
 ```shell
-$ pip install coraline
+# Basic installation
+pip install coraline
+
+# With boto3 dependency
+pip install coraline[boto]
 ```
 
-Coraline needs `boto3` to work. If you don't have it installed, you can install it using:
+## Documentation
 
-```shell
-$ pip install coraline[boto]
+### Architecture
+
+```mermaid
+graph TD
+    A[Pydantic Model] -->|Extends| B[CoralModel]
+    B -->|Creates/Manages| C[DynamoDB Table]
+    B -->|Validates| D[Data]
+    D -->|Stored in| C
+    E[AWS Credentials] -->|Configure| B
+    F[CoralConfig] -->|Configure| B
 ```
 
 ---
 
-### Documentation
+## Quick Start
 
-* TODO
-
----
-
-### Quick Start:
+### Define Your Model
 
 ```python
 import uuid
@@ -37,35 +59,59 @@ class UserType(Enum):
 
 
 class Users(CoralModel):
-    user_id: uuid.UUID = KeyField(default=lambda: uuid.uuid4(), hash_key=HashType.HASH, alias="userId")
-    user_type: UserType = KeyField(..., hash_type=HashType.RANGE, alias="userType")
+    user_id: uuid.UUID = KeyField(
+        default=lambda: uuid.uuid4(),
+        hash_key=HashType.HASH,
+        alias="userId"
+    )
+    user_type: UserType = KeyField(
+        ...,
+        hash_type=HashType.RANGE,
+        alias="userType"
+    )
     name: str
     age: int = Field(..., gt=0)
     password: SecretStr
 
 
+# Create the table if it doesn't exist
 Users.get_or_create_table()
-new_user = Users(name="John Doe", user_type=UserType.USER, age=30, password="123456")
+
+# Create and save a new user
+new_user = Users(
+    name="John Doe",
+    user_type=UserType.USER,
+    age=30,
+    password="123456"
+)
 new_user.save()
 ```
 
-This class will create a DynamoDB table named `Users`, with `PAY_PER_REQUEST` billing mode and using default AWS
-session, with the following fields:
+This example:
 
-* `userId` as a String. It's the Table's Hash Key.
-* `userType` as a String. It's the Table's Range Key.
-* `name` as a String
-* `email` as a Number
-* `password` as a String
+1. Defines a `Users` model that extends `CoralModel`
+2. Creates a DynamoDB table named `Users` with:
+   - `PAY_PER_REQUEST` billing mode (default)
+   - `userId` (String) as the Hash Key
+   - `userType` (String) as the Range Key
+   - Additional fields: `name` (String), `age` (Number), and `password` (String)
+3. Creates and saves a new user record to the table
 
-### Configuring the table
+## Table Configuration
 
-Use the `CoralConfig` class to configure your table.
+Use the `CoralConfig` class to customize your DynamoDB table settings.
 
 ```python
 import uuid
 from enum import Enum
-from coraline import CoralModel, KeyField, HashType, CoralConfig, BillingMode, TableClass
+from coraline import (
+    CoralModel,
+    KeyField,
+    HashType,
+    CoralConfig,
+    BillingMode,
+    TableClass
+)
 from pydantic import SecretStr, Field
 
 
@@ -75,6 +121,7 @@ class UserType(Enum):
 
 
 def to_camel(string: str) -> str:
+    """Convert snake_case to camelCase"""
     return ''.join(word.capitalize() for word in string.split('_'))
 
 
@@ -82,13 +129,24 @@ def to_camel(string: str) -> str:
 class Users(CoralModel):
     # CoralConfig is a subclass of Pydantic's ConfigDict
     model_config = CoralConfig(
+        # Custom table name (default is the class name)
         table_name="MyUsers",
+
+        # Set billing mode to PROVISIONED (default is PAY_PER_REQUEST)
         billing_mode=BillingMode.PROVISIONED,
         read_capacity_units=5,
         write_capacity_units=5,
+
+        # Convert field names to camelCase in DynamoDB
         alias_generator=to_camel,
+
+        # Prevent fields from being excluded when None
         protect_from_exclusion=True,
+
+        # Set table storage class
         table_class=TableClass.STANDARD_INFREQUENT_ACCESS,
+
+        # Add any additional parameters accepted by boto3's create_table
         extra_table_params={
             "Tags": [
                 {
@@ -99,36 +157,105 @@ class Users(CoralModel):
         }
     )
 
-    # KeyField is a sub method of Pydantic's Field
-    user_id: uuid.UUID = KeyField(default=lambda: uuid.uuid4(), hash_key=HashType.HASH)
-    user_type: UserType = KeyField(..., hash_type=HashType.RANGE)
+    # KeyField is a subclass of Pydantic's Field
+    user_id: uuid.UUID = KeyField(
+        default=lambda: uuid.uuid4(),
+        hash_key=HashType.HASH
+    )
+    user_type: UserType = KeyField(
+        ...,
+        hash_type=HashType.RANGE
+    )
     name: str
     age: int = Field(..., gt=0)
     password: SecretStr
 ```
 
-For Table Name, Billing Methods, you can use the `BillingMode` and Capacity Units constants. For any other parameter
-accepted by `boto3`'s `create_table` use the `extra_table_params` parameter.
+### Available Configuration Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `table_name` | Custom name for the DynamoDB table | Class name |
+| `billing_mode` | `BillingMode.PROVISIONED` or `BillingMode.PAY_PER_REQUEST` | `BillingMode.PAY_PER_REQUEST` |
+| `read_capacity_units` | Read capacity units (when using PROVISIONED) | 5 |
+| `write_capacity_units` | Write capacity units (when using PROVISIONED) | 5 |
+| `alias_generator` | Function to transform field names | None |
+| `protect_from_exclusion` | Prevent fields from being excluded when None | False |
+| `table_class` | Storage class for the table | `TableClass.STANDARD` |
+| `extra_table_params` | Additional parameters for boto3's create_table | {} |
 
 ---
 
-### Configuring AWS Credentials
+## AWS Credentials Configuration
 
-To configure boto3's client credentials, Coraline will:
+Coraline provides multiple ways to configure AWS credentials for connecting to DynamoDB. The library follows a priority order when determining which credentials to use:
 
-1. Check for Class specific configuration in `model_config`
-2. Check for Coraline Environment Variables (
-   ex. `CORALINE_AWS_REGION`, `CORALINE_AWS_ACCESS_KEY_ID`, `CORALINE_AWS_SECRET_ACCESS_KEY`)
-3. Check for AWS Environment Variables (ex. `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+1. Class-specific configuration in `model_config`
+2. Coraline environment variables
+3. Standard AWS environment variables
 
-#### Env Example:
+### Environment Variables
+
+You can set AWS credentials using environment variables:
+
 ```dotenv
-# Add to .env file:
-AWS_REGION="local"
-CORALINE_ENDPOINT_URL="http://localhost:8000"
+# Standard AWS environment variables
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+
+# Coraline-specific environment variables (take precedence)
+CORALINE_AWS_REGION="us-west-2"
+CORALINE_AWS_ACCESS_KEY_ID="your-coraline-access-key"
+CORALINE_AWS_SECRET_ACCESS_KEY="your-coraline-secret-key"
+CORALINE_ENDPOINT_URL="http://localhost:8000"  # For local development
 ```
 
-#### Class Example:
+### Model Configuration
+
+You can specify AWS credentials directly in your model configuration:
+
+```python
+from coraline import CoralModel, CoralConfig
+
+class Users(CoralModel):
+    model_config = CoralConfig(
+        # AWS credentials
+        aws_region="us-east-1",
+        aws_access_key_id="your-access-key",
+        aws_secret_access_key="your-secret-key",
+        aws_endpoint_url="http://localhost:8000"  # For local development
+    )
+```
+
+### Using Boto3 Config
+
+For more advanced configuration, you can use a boto3 Config instance:
+
+```python
+from botocore.config import Config
+from coraline import CoralModel, CoralConfig
+
+# Create a boto3 Config instance
+config = Config(
+    region_name="us-east-1",
+    endpoint_url="http://localhost:8000",
+    retries={
+        'max_attempts': 10,
+        'mode': 'standard'
+    }
+)
+
+class Users(CoralModel):
+    model_config = CoralConfig(
+        aws_config=config
+    )
+```
+
+### Local Development
+
+For local development with DynamoDB Local:
+
 ```python
 from coraline import CoralModel, CoralConfig
 
@@ -139,98 +266,164 @@ class Users(CoralModel):
     )
 ```
 
-#### Class Example using Boto3 Config instance:
-```python
-from botocore.config import Config
-from coraline import CoralModel, CoralConfig
-
-config = Config(
-    region_name="local",
-    endpoint_url="http://localhost:8000"
-)
-
-class Users(CoralModel):
-    model_config = CoralConfig(
-        aws_region="local",
-        aws_config=config
-    )
-```
-
 ---
 
-### Basic Operations
+## Basic Operations
 
-#### Get or Create Table
-Use to get Table info or create the table if it doesn't exist.
+Coraline provides a set of methods to interact with DynamoDB tables. Here are the most common operations:
+
+### Table Operations
+
+#### Create or Get Table
+
+Creates a new table if it doesn't exist, or returns information about the existing table:
 
 ```python
+# Create the table if it doesn't exist
 table_description: dict = Users.get_or_create_table()
+
+# Get the table name (returns "Users" by default, or the custom name if specified)
+table_name: str = Users.get_table_name()
 ```
 
-#### Get Table Info
-Use to get Table info. You can also add boto's client `describe_XXX` methods here, for any describe operation which does not have signature
-or the only argument is the TableName:
+#### Get Table Information
 
-* Allowable Descriptions Example: `describe_continuous_backups`, `describe_time_to_live`, `descript_limits`, etc...
-* Not Allowable Descriptions Example: `describe_backup`, `describe_global_table`, `describe_export`, etc...
+Retrieve detailed information about the table:
 
 ```python
-table_info: dict = Users.get_table_info(include=["describe_time_to_live"])
+# Get basic table information
+table_info: dict = Users.get_table_info()
+
+# Include additional describe operations
+table_info: dict = Users.get_table_info(
+    include=[
+        "describe_continuous_backups",
+        "describe_time_to_live"
+    ]
+)
 ```
 
-#### Check if Record exists
-Use to check if a record exists in the table. You need to pass on the parameters all hash and range keys defined in Model:
+> **Note**: Only describe operations that take just the TableName parameter are supported, such as:
+> - `describe_continuous_backups`
+> - `describe_time_to_live`
+> - `describe_limits`
+>
+> Operations that require additional parameters (like `describe_backup`, `describe_global_table`) are not supported through this method.
+
+### Record Operations
+
+#### Check if a Record Exists
+
+Check if a record exists by providing all hash and range keys:
 
 ```python
-user_exists: bool = Users.exists(user_id="12345678-1234-1234-1234-123456789012", user_type=UserType.USER)
+# Check if a user exists
+user_exists: bool = Users.exists(
+    user_id="12345678-1234-1234-1234-123456789012",
+    user_type=UserType.USER
+)
 ```
 
-#### Get Record
-Use to get a record from the table. You need to pass on the parameters all hash and range keys defined in Model:
+#### Get a Record
+
+Retrieve a record by providing all hash and range keys:
 
 ```python
-user: Users = Users.get(user_id="12345678-1234-1234-1234-123456789012", user_type=UserType.USER)
+# Get a user
+user: Users = Users.get(
+    user_id="12345678-1234-1234-1234-123456789012",
+    user_type=UserType.USER
+)
+
+# Access user properties
+print(f"User name: {user.name}")
+print(f"User age: {user.age}")
 ```
 
-#### Save Record
-Use to save a record in the table:
+#### Create and Save a Record
+
+Create a new record and save it to the table:
 
 ```python
-new_user = Users(name="John Doe", user_type=UserType.USER, age=30, password="123456")
+# Create a new user
+new_user = Users(
+    name="John Doe",
+    user_type=UserType.USER,
+    age=30,
+    password="123456"
+)
+
+# Save the user to the table
 new_user.save()
 ```
 
-### Using boto3's Client
+#### Update a Record
 
-You can use boto3's client to perform any operation you need. Just use the `get_client` method:
+Update an existing record:
 
 ```python
-new_user = Users(name="John Doe", user_type=UserType.USER, age=30, password="123456")
-new_user.save()
-new_user.get_client().create_backup(
-   TableName=new_user.table_name(),  # or Users.get_table_name()
-   BackupName="MyBackup"
+# Get an existing user
+user = Users.get(
+    user_id="12345678-1234-1234-1234-123456789012",
+    user_type=UserType.USER
+)
+
+# Update properties
+user.name = "Jane Doe"
+user.age = 31
+
+# Save the changes
+user.save()
+```
+
+### Advanced Operations
+
+#### Using boto3's Client Directly
+
+For operations not covered by Coraline's methods, you can access the boto3 client directly:
+
+```python
+# Get the boto3 client
+client = Users.get_client()
+
+# Use any boto3 DynamoDB client method
+client.create_backup(
+    TableName=Users.get_table_name(),
+    BackupName="MyBackup"
+)
+
+# Or from an instance
+user = Users.get(
+    user_id="12345678-1234-1234-1234-123456789012",
+    user_type=UserType.USER
+)
+user.get_client().update_time_to_live(
+    TableName=user.table_name(),
+    TimeToLiveSpecification={
+        'Enabled': True,
+        'AttributeName': 'ExpirationTime'
+    }
 )
 ```
 
 ---
-### Current Project Status
 
-Current status: In Progress
+## Contributing
 
-We strong advise to not use this lib in Production projects at this current stage.
-Except bugs and breaking changes between each release.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Future Implementations
-* Add option to "update" tables (`create_or_update_table` method)
-* Add native support for Global and Local Secondary Indexes
-* Add native support for Query operations
-* Add native support for TransactWriteItems and TransactGetItems
-* Add native support for BatchWriteItems and BatchGetItems
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
----
+Please make sure to update tests as appropriate.
 
-### Not working?
+## Issues and Support
 
-Don't panic. Get a towel and, please, open an
-[issue](https://github.com/megalus/coraline/issues).
+If something isn't working as expected, don't panic. Get a towel and please open an [issue](https://github.com/megalus/coraline/issues).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
