@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.1.0 (2025-06-19)
+
+### Documentation
+
+* docs: Add coding guidelines and update README for project features ([`3017397`](https://github.com/megalus/coraline/commit/3017397763fc3dd184aacd53a2ef75d9af118149))
+
+### Features
+
+* feat: add support to Union and Optional types in Pydantic models ([`b5aad97`](https://github.com/megalus/coraline/commit/b5aad975e565d0baa3d0ede32255c2af73af42c0))
+
+
 ## v1.0.1 (2025-03-20)
 
 ### Fixes
