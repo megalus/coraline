@@ -1,5 +1,7 @@
 from __future__ import annotations as _annotations
 
+from collections.abc import Callable
+
 from botocore.config import Config
 from pydantic import ConfigDict
 
@@ -20,3 +22,4 @@ class CoralConfig(ConfigDict):
     protect_from_exclusion: bool | None
     table_class: TableClass | None
     extra_table_params: dict | None
+    fallback_json_dump: Callable | None

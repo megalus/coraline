@@ -4,7 +4,7 @@ services:
    image: "amazon/dynamodb-local"
    container_name: dynamodb-local
    ports:
-     - "8001:8000"
+     - "8099:8000"
    working_dir: /home/dynamodblocal
    environment:
      AWS_ACCESS_KEY_ID: 'DUMMYIDEXAMPLE'

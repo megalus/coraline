@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import json
 import sys
+import types
 import uuid
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, ClassVar, Dict, List, Optional, Union, get_origin
 
 import boto3
 import botocore
@@ -14,6 +13,7 @@ from loguru import logger
 from pydantic import BaseModel, PrivateAttr
 from stela import env
 
+from coraline import CoralConfig
 from coraline.exceptions import CoralNotFound
 from coraline.types import BillingMode, HashType, TableClass
 
@@ -26,6 +26,7 @@ RUNNING_TESTS = "pytest" in sys.modules or "test" in sys.argv
 
 
 class CoralModel(BaseModel):
+    model_config: ClassVar[CoralConfig] = CoralConfig()
     _client: Optional[DynamoDBClient] = PrivateAttr(default=None)
     _table_name: Optional[str] = PrivateAttr(default=None)
 
@@ -69,8 +70,7 @@ class CoralModel(BaseModel):
         if not value and env_key not in ["config", "aws_endpoint_url"]:
             value = env.get(env_key.upper(), raise_on_missing=False)
 
-        if value:
-            return value
+        return value if value else None
 
     @classmethod
     def _get_client(cls):
@@ -105,7 +105,17 @@ class CoralModel(BaseModel):
         return boto3.client("dynamodb", **client_args)
 
     @classmethod
-    def _convert_type(cls, annotation: Optional[Type[Any]]) -> Any:
+    def _convert_type(cls, annotation: Any, value: Optional[Any]) -> Any:
+
+        def is_union() -> bool:
+            # Para Python < 3.10 (typing.Union)
+            if get_origin(annotation) is Union:
+                return True
+            # Para Python 3.10+ (| operator)
+            if isinstance(annotation, types.UnionType):
+                return True
+            return False
+
         dynamo_types = {
             int: "N",
             float: "N",
@@ -125,6 +135,21 @@ class CoralModel(BaseModel):
             Any: "S",
             Enum: "S",
         }
+
+        if value is None:
+            return "NULL"
+
+        # check if annotation is typing.Optional (example: Optional[str, int])
+        # or Union (example: Union[str, int])
+        # we need to infer the type using the value informed
+        if is_union():
+            # Get all types from Optional
+            annotation_types = annotation.__args__
+            # for each type, check if `value` is an instance of that type
+            for opt_type in annotation_types:
+                if isinstance(value, opt_type):
+                    return cls._convert_type(opt_type, value)
+
         return dynamo_types.get(annotation, "S")
 
     def __eq__(self, other):
@@ -181,7 +206,9 @@ class CoralModel(BaseModel):
         attribute_definitions = [
             {
                 "AttributeName": field_info.alias or field_name,
-                "AttributeType": cls._convert_type(field_info.annotation),
+                "AttributeType": cls._convert_type(
+                    field_info.annotation, field_info.default
+                ),
             }
             for field_name, field_info in cls.model_fields.items()
             if field_info.json_schema_extra is not None
@@ -261,24 +288,30 @@ class CoralModel(BaseModel):
         return table
 
     def save(self, **kwargs):
-        def get_key(field_info):
-            return self._convert_type(field_info.annotation)
+        def get_key(field_info, value):
+            return self._convert_type(field_info.annotation, value)
 
         def get_value(field_info, value):
-            if get_key(field_info) == "N":
+            if get_key(field_info, value) == "N":
                 value = str(value)
-            if get_key(field_info) == "NS":
+            if get_key(field_info, value) == "NS":
                 value = [str(v) for v in value]
             return value
 
-        dump_data = json.loads(self.model_dump_json())
-        item = {
-            field_info.alias
-            or field_name: {
-                get_key(field_info): get_value(field_info, dump_data[field_name])
-            }
-            for field_name, field_info in self.model_fields.items()
-        }
+        fallback_json_dump = self.model_config.get(
+            "fallback_json_dump", lambda x: str(x)
+        )
+        dump_data = json.loads(self.model_dump_json(fallback=fallback_json_dump))
+        item = {}
+        for field_name, field_info in self.model_fields.items():
+            key = field_info.alias or field_name
+            sub_key = get_key(field_info, dump_data[field_name])
+            sub_value = (
+                True
+                if sub_key == "NULL"
+                else get_value(field_info, dump_data[field_name])
+            )
+            item[key] = {sub_key: sub_value}
         return self.get_client().put_item(
             TableName=self.table_name(), Item=item, **kwargs
         )
@@ -303,9 +336,14 @@ class CoralModel(BaseModel):
                 f"Item not found in table {cls.get_table_name()}: {key_query}"
             )
 
-        item_payload = {
-            key: data[list(data.keys())[0]] for key, data in response["Item"].items()
-        }
+        item_payload = {}
+        for key, data in response["Item"].items():
+            dynamo_type = list(data.keys())[0]
+            if dynamo_type == "NULL":
+                item_payload[key] = None
+            else:
+                item_payload[key] = data[dynamo_type]
+
         return cls(**item_payload)
 
     @classmethod
@@ -338,7 +376,7 @@ class CoralModel(BaseModel):
     @classmethod
     def _get_key_query(cls, **kwargs):
         def get_query_dict(field_info, field_name):
-            convert_type = cls._convert_type(field_info.annotation)
+            convert_type = cls._convert_type(field_info.annotation, field_info.default)
             convert_data = kwargs.pop(field_name)
             if convert_type == "S":
                 convert_data = str(convert_data)

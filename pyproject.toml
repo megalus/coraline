@@ -26,13 +26,16 @@ py-lamina = "*"
 stela = "*"
 asbool = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 boto3 = "*"
 mypy-boto3-dynamodb = "*"
 Faker = "*"
 pytest = "*"
 pytest-asyncio = "*"
 arrow = "*"
+pydantic-extra-types = "*"
+email-validator = "*"
+phonenumbers = "*"
 
 [tool.poetry.extras]
 boto = ["boto3"]

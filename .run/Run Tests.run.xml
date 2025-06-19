@@ -5,7 +5,7 @@
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <option name="SDK_HOME" value="" />
-    <option name="SDK_NAME" value="Python 3.11.10 WSL (Ubuntu): (/home/chrismaille/.cache/pypoetry/virtualenvs/coraline-qHKeRfoR-py3.11/bin/python)" />
+    <option name="SDK_NAME" value="Python 3.12.11 WSL (Ubuntu): (/home/chrismaille/.cache/pypoetry/virtualenvs/coraline-qHKeRfoR-py3.12/bin/python)" />
     <option name="WORKING_DIRECTORY" value="" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
@@ -21,6 +21,8 @@
     <option name="_new_additionalArguments" value="&quot;&quot;" />
     <option name="_new_target" value="&quot;&quot;" />
     <option name="_new_targetType" value="&quot;CUSTOM&quot;" />
-    <method v="2" />
+    <method v="2">
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Run Deps" run_configuration_type="docker-deploy" />
+    </method>
   </configuration>
 </component>

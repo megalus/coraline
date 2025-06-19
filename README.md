@@ -173,16 +173,16 @@ class Users(CoralModel):
 
 ### Available Configuration Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `table_name` | Custom name for the DynamoDB table | Class name |
-| `billing_mode` | `BillingMode.PROVISIONED` or `BillingMode.PAY_PER_REQUEST` | `BillingMode.PAY_PER_REQUEST` |
-| `read_capacity_units` | Read capacity units (when using PROVISIONED) | 5 |
-| `write_capacity_units` | Write capacity units (when using PROVISIONED) | 5 |
-| `alias_generator` | Function to transform field names | None |
-| `protect_from_exclusion` | Prevent fields from being excluded when None | False |
-| `table_class` | Storage class for the table | `TableClass.STANDARD` |
-| `extra_table_params` | Additional parameters for boto3's create_table | {} |
+| Option                   | Description                                                | Default                       |
+|--------------------------|------------------------------------------------------------|-------------------------------|
+| `table_name`             | Custom name for the DynamoDB table                         | Class name                    |
+| `billing_mode`           | `BillingMode.PROVISIONED` or `BillingMode.PAY_PER_REQUEST` | `BillingMode.PAY_PER_REQUEST` |
+| `read_capacity_units`    | Read capacity units (when using PROVISIONED)               | 5                             |
+| `write_capacity_units`   | Write capacity units (when using PROVISIONED)              | 5                             |
+| `alias_generator`        | Function to transform field names                          | None                          |
+| `protect_from_exclusion` | Prevent fields from being excluded when None               | False                         |
+| `table_class`            | Storage class for the table                                | `TableClass.STANDARD`         |
+| `extra_table_params`     | Additional parameters for boto3's create_table             | {}                            |
 
 ---
 
