@@ -376,6 +376,31 @@ user.age = 31
 user.save()
 ```
 
+#### Delete a Record
+
+Delete an existing record:
+
+```python
+# Get an existing user
+user = Users.get(
+    user_id="12345678-1234-1234-1234-123456789012",
+    user_type=UserType.USER
+)
+
+# Delete the user
+user.delete()
+
+# You can also use the async version
+await user.adelete()
+
+# Verify the user no longer exists
+user_exists = Users.exists(
+    user_id="12345678-1234-1234-1234-123456789012",
+    user_type=UserType.USER
+)
+assert user_exists is False
+```
+
 ### Advanced Operations
 
 #### Using boto3's Client Directly

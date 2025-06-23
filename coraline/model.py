@@ -29,6 +29,7 @@ class CoralModel(BaseModel):
     model_config: ClassVar[CoralConfig] = CoralConfig()
     _client: Optional[DynamoDBClient] = PrivateAttr(default=None)
     _table_name: Optional[str] = PrivateAttr(default=None)
+    __query_key: Optional[Dict[str, Any]] = {}
 
     def get_client(self) -> DynamoDBClient:
         if not self._client:
@@ -312,6 +313,11 @@ class CoralModel(BaseModel):
                 else get_value(field_info, dump_data[field_name])
             )
             item[key] = {sub_key: sub_value}
+
+        # Before return, we need to set __query_key
+        # using item data
+        _, self.__query_key, _ = self._get_key_query(**dump_data)
+
         return self.get_client().put_item(
             TableName=self.table_name(), Item=item, **kwargs
         )
@@ -344,7 +350,9 @@ class CoralModel(BaseModel):
             else:
                 item_payload[key] = data[dynamo_type]
 
-        return cls(**item_payload)
+        instance = cls(**item_payload)
+        instance.__query_key = key_query
+        return instance
 
     @classmethod
     def get_table_info(cls, include: list[str] | None = None):
@@ -391,6 +399,18 @@ class CoralModel(BaseModel):
         }
         return client, key_query, kwargs
 
+    def delete(self):
+        """
+        Deletes the current instance from the DynamoDB table.
+        Raises CoralNotFound if the item does not exist.
+        """
+        client = self.get_client()
+        response = client.delete_item(TableName=self.table_name(), Key=self.__query_key)
+        if response.get("ResponseMetadata", {}).get("HTTPStatusCode") != 200:
+            raise CoralNotFound(
+                f"Item not found in table {self.table_name()}: {self.__query_key}"
+            )
+
     ###################################
     #                                 #
     # Async methods                   #
@@ -410,6 +430,9 @@ class CoralModel(BaseModel):
 
     async def asave(self, **kwargs):
         return await async_(self.save)(**kwargs)
+
+    async def adelete(self):
+        return await async_(self.delete)()
 
     @classmethod
     async def aexists(cls, **kwargs):
