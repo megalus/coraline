@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.2.0 (2025-06-23)
+
+### Features
+
+* feat: implement delete functionality for DynamoDB records and update documentation ([`7c506db`](https://github.com/megalus/coraline/commit/7c506db1b0dd4c697be351ed0a73c11b69f2ad83))
+
+
 ## v1.1.0 (2025-06-19)
 
 ### Documentation
