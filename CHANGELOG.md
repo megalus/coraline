@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.3.0 (2025-06-24)
+
+### Features
+
+* feat: enhance environment variable retrieval with additional logging ([`dd12c4f`](https://github.com/megalus/coraline/commit/dd12c4f4bbab0478904366e6afb1e5b1efbb177d))
+
+
 ## v1.2.0 (2025-06-23)
 
 ### Features
