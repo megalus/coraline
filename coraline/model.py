@@ -60,16 +60,27 @@ class CoralModel(BaseModel):
 
         # Try Model Config. Ex. model_config["aws_region"]
         value = cls.model_config.get(env_key, None)
+        if value:
+            logger.debug(f"Found value for '{env_key}' via: Model Config")
 
         # Try Coraline env variables. Ex. CORALINE_AWS_REGION
         # AWS Config did not exists as Environment Variable
         if not value and env_key not in ["config"]:
             value = env.get(f"CORALINE_{env_key.upper()}", raise_on_missing=False)
+            if value:
+                logger.debug(
+                    f"Found value for '{env_key}' via: CORALINE_{env_key.upper()}"
+                )
 
         # Try AWS env variables. Ex. AWS_REGION
         # AWS Config and DynamoDB Endpoint URL does not exist as AWS Environment Variable
         if not value and env_key not in ["config", "aws_endpoint_url"]:
             value = env.get(env_key.upper(), raise_on_missing=False)
+            if value:
+                logger.debug(f"Found value for '{env_key}' via: {env_key.upper()}")
+
+        if not value:
+            logger.debug(f"Value not found for '{env_key}'")
 
         return value if value else None
 
