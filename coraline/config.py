@@ -23,3 +23,4 @@ class CoralConfig(ConfigDict):
     table_class: TableClass | None
     extra_table_params: dict | None
     fallback_json_dump: Callable | None
+    show_config_logs: bool | None

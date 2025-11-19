@@ -1,13 +1,15 @@
-import json
 import sys
 import types
 import uuid
+from datetime import date, datetime, timezone  # ADD
 from decimal import Decimal
 from enum import Enum
 from typing import Any, ClassVar, Dict, List, Optional, Union, get_origin
+from uuid import UUID  # ADD
 
 import boto3
 import botocore
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from lamina.helpers import async_
 from loguru import logger
 from pydantic import BaseModel, PrivateAttr
@@ -30,6 +32,86 @@ class CoralModel(BaseModel):
     _client: Optional[DynamoDBClient] = PrivateAttr(default=None)
     _table_name: Optional[str] = PrivateAttr(default=None)
     __query_key: Optional[Dict[str, Any]] = {}
+
+    @staticmethod
+    def _normalize_for_dynamodb(value: Any, force_string: bool = False) -> Any:
+        """Normalize Python values to DynamoDB-serializable types.
+
+        - UUID -> str
+        - datetime/date/Arrow -> ISO8601 UTC string (Z)
+        - float -> Decimal (to avoid float issues)
+        - tuple -> list
+        - list/set/dict -> recursively normalized
+        - Enum -> its value (or str(value) as fallback)
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, UUID):
+            return str(value)
+
+        if isinstance(value, datetime):
+            dt = value
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            else:
+                dt = dt.astimezone(timezone.utc)
+            # ISO 8601 with Z
+            return dt.isoformat().replace("+00:00", "Z")
+
+        if isinstance(value, date):
+            # Keep date as ISO 8601 date string
+            return value.isoformat()
+
+        if isinstance(value, float):
+            # Convert to Decimal for precise DynamoDB numbers
+            return Decimal(str(value))
+
+        if isinstance(value, Enum):
+            v = value.value
+            if isinstance(v, (str, int, float, Decimal, bool)):
+                return v if not isinstance(v, float) else Decimal(str(v))
+            return str(v)
+
+        if isinstance(value, tuple):
+            return [CoralModel._normalize_for_dynamodb(v) for v in value]
+
+        if isinstance(value, list):
+            return [CoralModel._normalize_for_dynamodb(v) for v in value]
+
+        if isinstance(value, set):
+            return {CoralModel._normalize_for_dynamodb(v) for v in value}
+
+        if isinstance(value, dict):
+            return {
+                CoralModel._normalize_for_dynamodb(
+                    k, True
+                ): CoralModel._normalize_for_dynamodb(v)
+                for k, v in value.items()
+            }
+
+        try:
+            from pydantic import SecretStr
+
+            if isinstance(value, SecretStr):
+                return value.get_secret_value()
+        except ImportError:
+            pass
+
+        try:
+            import arrow
+
+            if isinstance(value, arrow.Arrow):
+                dt = value.datetime
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    dt = dt.astimezone(timezone.utc)
+                return dt.isoformat().replace("+00:00", "Z")
+        except ImportError:
+            pass
+
+        return value if not force_string else str(value)
 
     def get_client(self) -> DynamoDBClient:
         if not self._client:
@@ -60,14 +142,15 @@ class CoralModel(BaseModel):
 
         # Try Model Config. Ex. model_config["aws_region"]
         value = cls.model_config.get(env_key, None)
-        if value:
+        show_logs = cls.model_config.get("show_config_logs", False)
+        if value and show_logs:
             logger.debug(f"Found value for '{env_key}' via: Model Config")
 
         # Try Coraline env variables. Ex. CORALINE_AWS_REGION
         # AWS Config did not exists as Environment Variable
         if not value and env_key not in ["config"]:
             value = env.get(f"CORALINE_{env_key.upper()}", raise_on_missing=False)
-            if value:
+            if value and show_logs:
                 logger.debug(
                     f"Found value for '{env_key}' via: CORALINE_{env_key.upper()}"
                 )
@@ -76,16 +159,17 @@ class CoralModel(BaseModel):
         # AWS Config and DynamoDB Endpoint URL does not exist as AWS Environment Variable
         if not value and env_key not in ["config", "aws_endpoint_url"]:
             value = env.get(env_key.upper(), raise_on_missing=False)
-            if value:
+            if value and show_logs:
                 logger.debug(f"Found value for '{env_key}' via: {env_key.upper()}")
 
-        if not value:
+        if not value and show_logs:
             logger.debug(f"Value not found for '{env_key}'")
 
         return value if value else None
 
     @classmethod
     def _get_client(cls):
+        show_logs = cls.model_config.get("show_config_logs", False)
         # First Case: User passes a Config instance
         if cls._get_client_parameters("aws_config"):
             client_args = {
@@ -113,7 +197,8 @@ class CoralModel(BaseModel):
             message += f" Endpoint: {client_args['endpoint_url']}"
         if client_args.get("config"):
             message += " Using Config instance."
-        logger.debug(message)
+        if show_logs:
+            logger.debug(message)
         return boto3.client("dynamodb", **client_args)
 
     @classmethod
@@ -300,34 +385,24 @@ class CoralModel(BaseModel):
         return table
 
     def save(self, **kwargs):
-        def get_key(field_info, value):
-            return self._convert_type(field_info.annotation, value)
+        """Serialize item using boto3 TypeSerializer with pre-normalization."""
+        serializer: TypeSerializer = TypeSerializer()
+        dump_data: Dict[str, Any] = self.model_dump()  # keep Python types
 
-        def get_value(field_info, value):
-            if get_key(field_info, value) == "N":
-                value = str(value)
-            if get_key(field_info, value) == "NS":
-                value = [str(v) for v in value]
-            return value
+        normalized = {
+            field_name: CoralModel._normalize_for_dynamodb(dump_data[field_name])
+            for field_name in self.model_fields.keys()
+        }
 
-        fallback_json_dump = self.model_config.get(
-            "fallback_json_dump", lambda x: str(x)
-        )
-        dump_data = json.loads(self.model_dump_json(fallback=fallback_json_dump))
-        item = {}
-        for field_name, field_info in self.model_fields.items():
-            key = field_info.alias or field_name
-            sub_key = get_key(field_info, dump_data[field_name])
-            sub_value = (
-                True
-                if sub_key == "NULL"
-                else get_value(field_info, dump_data[field_name])
+        item = {
+            (field_info.alias or field_name): serializer.serialize(
+                normalized[field_name]
             )
-            item[key] = {sub_key: sub_value}
+            for field_name, field_info in self.model_fields.items()
+        }
 
-        # Before return, we need to set __query_key
-        # using item data
-        _, self.__query_key, _ = self._get_key_query(**dump_data)
+        # Update __query_key using normalized keys
+        _, self.__query_key, _ = self._get_key_query(**normalized)
 
         return self.get_client().put_item(
             TableName=self.table_name(), Item=item, **kwargs
@@ -343,6 +418,7 @@ class CoralModel(BaseModel):
 
     @classmethod
     def get(cls, **kwargs):
+        """Get item and deserialize to Python types using TypeDeserializer."""
         client, key_query, kwargs = cls._get_key_query(**kwargs)
         response = client.get_item(
             TableName=cls.get_table_name(), Key=key_query, **kwargs
@@ -353,13 +429,11 @@ class CoralModel(BaseModel):
                 f"Item not found in table {cls.get_table_name()}: {key_query}"
             )
 
-        item_payload = {}
-        for key, data in response["Item"].items():
-            dynamo_type = list(data.keys())[0]
-            if dynamo_type == "NULL":
-                item_payload[key] = None
-            else:
-                item_payload[key] = data[dynamo_type]
+        deserializer: TypeDeserializer = TypeDeserializer()
+        item_payload: Dict[str, Any] = {
+            key: deserializer.deserialize(value)
+            for key, value in response["Item"].items()
+        }
 
         instance = cls(**item_payload)
         instance.__query_key = key_query
@@ -394,20 +468,26 @@ class CoralModel(BaseModel):
 
     @classmethod
     def _get_key_query(cls, **kwargs):
-        def get_query_dict(field_info, field_name):
-            convert_type = cls._convert_type(field_info.annotation, field_info.default)
-            convert_data = kwargs.pop(field_name)
-            if convert_type == "S":
-                convert_data = str(convert_data)
-            return {convert_type: convert_data}
-
+        """Build DynamoDB Key using TypeSerializer after normalizing values."""
+        serializer: TypeSerializer = TypeSerializer()
         client = cls._get_client()
-        key_query = {
-            field_info.alias or field_name: get_query_dict(field_info, field_name)
-            for field_name, field_info in cls.model_fields.items()
-            if field_info.json_schema_extra is not None
-            and field_info.json_schema_extra.get("dynamodb_key") is True
-        }
+        key_query: Dict[str, Dict[str, Any]] = {}
+
+        for field_name, field_info in cls.model_fields.items():
+            if (
+                field_info.json_schema_extra is not None
+                and field_info.json_schema_extra.get("dynamodb_key") is True
+            ):
+                raw_value: Any = kwargs.pop(field_name)
+                value = CoralModel._normalize_for_dynamodb(raw_value)
+                key: str = field_info.alias or field_name
+                key_query[key] = serializer.serialize(value)
+
+        show_logs = cls.model_config.get("show_config_logs", False)
+        if show_logs:
+            logger.debug(
+                f"Built key query for table {cls.get_table_name()}: {key_query}"
+            )
         return client, key_query, kwargs
 
     def delete(self):
@@ -448,3 +528,50 @@ class CoralModel(BaseModel):
     @classmethod
     async def aexists(cls, **kwargs):
         return await async_(cls.exists)(**kwargs)
+
+    ###################################
+    #                                 #
+    # Meta methods                    #
+    #                                 #
+    ###################################
+
+    @classmethod
+    def __get_field_name(
+        cls, hash_type: HashType, as_alias: bool = False
+    ) -> Optional[str]:
+        for field_name, field_info in cls.model_fields.items():
+            if (
+                field_info.json_schema_extra is not None
+                and field_info.json_schema_extra.get("dynamodb_key") is True
+                and field_info.json_schema_extra.get("dynamodb_hash_type") == hash_type
+            ):
+                return field_info.alias if as_alias else field_name
+
+    @classmethod
+    def get_hash_field_name(cls, as_alias: bool = False) -> Optional[str]:
+        """Get the name of the hash key field.
+
+        Example:
+            class TestModel(CoralModel):
+                id: str = KeyField(..., hash_type=HashType.HASH)
+                name: str
+
+            hash_field = TestModel.get_hash_field_name()
+            print(hash_field)  # Output: 'id'
+        """
+        return cls.__get_field_name(HashType.HASH, as_alias)
+
+    @classmethod
+    def get_range_field_name(cls, as_alias: bool = False) -> Optional[str]:
+        """Get the name of the range key field.
+
+        Example:
+            class TestModel(CoralModel):
+                id: str = KeyField(..., hash_type=HashType.HASH)
+                timestamp: int = KeyField(..., hash_type=HashType.RANGE)
+                name: str
+
+            range_field = TestModel.get_range_field_name()
+            print(range_field)  # Output: 'timestamp'
+        """
+        return cls.__get_field_name(HashType.RANGE, as_alias)

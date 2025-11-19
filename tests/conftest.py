@@ -32,7 +32,7 @@ def user_table():
             alias="userId",
         )
         username: str
-        password: str
+        password: SecretStr
         score: float
         price: Decimal
         created_at: datetime | Arrow | int
