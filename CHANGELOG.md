@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.4.0 (2025-11-19)
+
+### Features
+
+* feat: add normalization for DynamoDB types and enhance logging for config retrieval ([`43dfd45`](https://github.com/megalus/coraline/commit/43dfd454350339b4a6ace8cdf08bf7775ed6834a))
+
+
 ## v1.3.0 (2025-06-24)
 
 ### Features
